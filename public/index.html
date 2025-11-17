@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RAG System - PDF Q&A</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      padding: 20px;
+    }
+
+    .header {
+      text-align: center;
+      color: white;
+      margin-bottom: 30px;
+    }
+
+    .header h1 {
+      font-size: 2.5em;
+      margin-bottom: 10px;
+      text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+    }
+
+    .header p {
+      font-size: 1.1em;
+      opacity: 0.9;
+    }
+
+    .container {
+      max-width: 1000px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      flex: 1;
+    }
+
+    .card {
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+      padding: 25px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .card h2 {
+      color: #333;
+      margin-bottom: 20px;
+      font-size: 1.4em;
+      border-bottom: 3px solid #667eea;
+      padding-bottom: 10px;
+    }
+
+    .upload-section {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+
+    .file-input-wrapper {
+      position: relative;
+      overflow: hidden;
+    }
+
+    .file-input-wrapper input[type="file"] {
+      display: none;
+    }
+
+    .file-input-label {
+      display: block;
+      padding: 15px 20px;
+      background: #667eea;
+      color: white;
+      border-radius: 8px;
+      cursor: pointer;
+      text-align: center;
+      font-weight: 600;
+      transition: all 0.3s ease;
+      border: 2px solid #667eea;
+    }
+
+    .file-input-label:hover {
+      background: #5568d3;
+      transform: translateY(-2px);
+    }
+
+    .file-name {
+      color: #666;
+      font-size: 0.9em;
+      padding: 10px 0;
+      min-height: 20px;
+    }
+
+    .status {
+      padding: 12px 15px;
+      border-radius: 8px;
+      font-size: 0.9em;
+      margin-bottom: 10px;
+      display: none;
+    }
+
+    .status.success {
+      background: #d4edda;
+      color: #155724;
+      display: block;
+      border: 1px solid #c3e6cb;
+    }
+
+    .status.error {
+      background: #f8d7da;
+      color: #721c24;
+      display: block;
+      border: 1px solid #f5c6cb;
+    }
+
+    .status.info {
+      background: #d1ecf1;
+      color: #0c5460;
+      display: block;
+      border: 1px solid #bee5eb;
+    }
+
+    .status.loading {
+      background: #fff3cd;
+      color: #856404;
+      display: block;
+      border: 1px solid #ffeaa7;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 15px;
+    }
+
+    .stat-box {
+      background: #f8f9fa;
+      padding: 12px;
+      border-radius: 8px;
+      text-align: center;
+      border-left: 4px solid #667eea;
+    }
+
+    .stat-label {
+      font-size: 0.8em;
+      color: #666;
+      text-transform: uppercase;
+    }
+
+    .stat-value {
+      font-size: 1.5em;
+      font-weight: bold;
+      color: #333;
+    }
+
+    .qa-section {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+
+    .input-group {
+      display: flex;
+      gap: 10px;
+    }
+
+    input[type="text"] {
+      flex: 1;
+      padding: 12px 15px;
+      border: 2px solid #e0e0e0;
+      border-radius: 8px;
+      font-size: 1em;
+      transition: border-color 0.3s ease;
+    }
+
+    input[type="text"]:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+
+    button {
+      padding: 12px 25px;
+      background: #667eea;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 1em;
+      transition: all 0.3s ease;
+    }
+
+    button:hover {
+      background: #5568d3;
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+    }
+
+    button:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .response-section {
+      flex: 1;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+
+    .response-box {
+      background: #f8f9fa;
+      padding: 15px;
+      border-radius: 8px;
+      border-left: 4px solid #667eea;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+
+    .response-box.empty {
+      display: none;
+    }
+
+    .response-label {
+      font-size: 0.8em;
+      color: #666;
+      text-transform: uppercase;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+
+    .response-content {
+      color: #333;
+      line-height: 1.6;
+    }
+
+    .sources {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .source-item {
+      background: white;
+      padding: 10px;
+      border-radius: 6px;
+      border-left: 3px solid #764ba2;
+      font-size: 0.85em;
+      color: #555;
+    }
+
+    .controls {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 15px;
+    }
+
+    .btn-secondary {
+      background: #6c757d;
+      flex: 1;
+      padding: 10px;
+      font-size: 0.9em;
+    }
+
+    .btn-secondary:hover {
+      background: #5a6268;
+    }
+
+    .btn-danger {
+      background: #dc3545;
+      flex: 1;
+      padding: 10px;
+      font-size: 0.9em;
+    }
+
+    .btn-danger:hover {
+      background: #c82333;
+    }
+
+    .spinner {
+      display: inline-block;
+      width: 12px;
+      height: 12px;
+      border: 2px solid #f3f3f3;
+      border-top: 2px solid #667eea;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-right: 8px;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    @media (max-width: 768px) {
+      .container {
+        grid-template-columns: 1fr;
+      }
+
+      .header h1 {
+        font-size: 1.8em;
+      }
+
+      .stats {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .footer {
+      text-align: center;
+      color: white;
+      margin-top: 30px;
+      opacity: 0.8;
+      font-size: 0.9em;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1> RAG System</h1>
+    <p>PDF-based Question & Answer System with AI</p>
+  </div>
+
+  <div class="container">
+    <!-- Upload Section -->
+    <div class="card">
+      <h2>Upload PDF</h2>
+      <div class="upload-section">
+        <div class="file-input-wrapper">
+          <input type="file" id="pdfInput" accept=".pdf" />
+          <label for="pdfInput" class="file-input-label">Choose PDF File</label>
+        </div>
+        <div id="fileName" class="file-name"></div>
+        <div id="uploadStatus" class="status"></div>
+        
+        <div class="stats">
+          <div class="stat-box">
+            <div class="stat-label">Documents</div>
+            <div class="stat-value" id="docCount">0</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-label">Status</div>
+            <div class="stat-value" id="statusValue" style="font-size: 1em;">Ready</div>
+          </div>
+        </div>
+
+        <div class="controls">
+          <button id="saveBtn" class="btn-secondary" title="Save vector store"> Save</button>
+          <button id="loadBtn" class="btn-secondary" title="Load vector store"> Load</button>
+          <button id="clearBtn" class="btn-danger" title="Clear all documents"> Clear</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Q&A Section -->
+    <div class="card">
+      <h2> Ask Questions</h2>
+      <div class="qa-section">
+        <div class="input-group">
+          <input 
+            type="text" 
+            id="queryInput" 
+            placeholder="Ask a question about your PDF..."
+            @keypress="handleKeyPress"
+          />
+          <button id="askBtn">Ask</button>
+        </div>
+
+        <div class="response-section">
+          <div id="responseAnswer" class="response-box empty">
+            <div class="response-label">Answer</div>
+            <div class="response-content" id="answerContent"></div>
+          </div>
+
+          <div id="responseSources" class="response-box empty">
+            <div class="response-label"> Source Documents</div>
+            <div class="sources" id="sourcesContent"></div>
+          </div>
+
+          <div id="queryStatus" class="status"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <p>RAG System using Gecko Embeddings & Gemini LLM | TSON Serialization</p>
+  </div>
+
+  <script>
+    // API Configuration
+    const API_BASE = '/api';
+    let currentDocuments = [];
+
+    // UI Elements
+    const pdfInput = document.getElementById('pdfInput');
+    const fileNameDisplay = document.getElementById('fileName');
+    const uploadStatus = document.getElementById('uploadStatus');
+    const queryInput = document.getElementById('queryInput');
+    const askBtn = document.getElementById('askBtn');
+    const queryStatus = document.getElementById('queryStatus');
+    const docCount = document.getElementById('docCount');
+    const statusValue = document.getElementById('statusValue');
+    const responseAnswer = document.getElementById('responseAnswer');
+    const answerContent = document.getElementById('answerContent');
+    const responseSources = document.getElementById('responseSources');
+    const sourcesContent = document.getElementById('sourcesContent');
+    const saveBtn = document.getElementById('saveBtn');
+    const loadBtn = document.getElementById('loadBtn');
+    const clearBtn = document.getElementById('clearBtn');
+
+    // Event Listeners
+    pdfInput.addEventListener('change', handlePdfUpload);
+    askBtn.addEventListener('click', handleQuery);
+    queryInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') handleQuery();
+    });
+    saveBtn.addEventListener('click', handleSave);
+    loadBtn.addEventListener('click', handleLoad);
+    clearBtn.addEventListener('click', handleClear);
+
+    // Update document count on load
+    updateDocumentCount();
+    setInterval(updateDocumentCount, 5000);
+
+    // Helper Functions
+    function showStatus(element, message, type) {
+      element.textContent = message;
+      element.className = `status ${type}`;
+    }
+
+    async function updateDocumentCount() {
+      try {
+        const response = await fetch(`${API_BASE}/documents`);
+        const data = await response.json();
+        docCount.textContent = data.documentCount || '0';
+        statusValue.textContent = data.documentCount > 0 ? ' Ready' : ' Upload PDF';
+      } catch (error) {
+        console.error('Failed to update document count:', error);
+      }
+    }
+
+    async function handlePdfUpload(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      fileNameDisplay.textContent = ` ${file.name}`;
+      showStatus(uploadStatus, `⏳ Processing ${file.name}...`, 'loading');
+      askBtn.disabled = true;
+
+      try {
+        const formData = new FormData();
+        formData.append('pdf', file);
+
+        const response = await fetch(`${API_BASE}/upload-pdf`, {
+          method: 'POST',
+          body: formData,
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+          showStatus(
+            uploadStatus,
+            ` Indexed ${result.documentsCreated} chunks from ${result.pages} pages`,
+            'success'
+          );
+          updateDocumentCount();
+        } else {
+          showStatus(uploadStatus, ` ${result.error}`, 'error');
+        }
+      } catch (error) {
+        showStatus(uploadStatus, ` ${error.message}`, 'error');
+        console.error('Upload error:', error);
+      } finally {
+        askBtn.disabled = false;
+      }
+    }
+
+    async function handleQuery() {
+      const query = queryInput.value.trim();
+      if (!query) {
+        showStatus(queryStatus, ' Please enter a question', 'error');
+        return;
+      }
+
+      const count = parseInt(docCount.textContent) || 0;
+      if (count === 0) {
+        showStatus(queryStatus, ' Please upload a PDF first', 'error');
+        return;
+      }
+
+      askBtn.disabled = true;
+      showStatus(queryStatus, `<span class="spinner"></span>Thinking...`, 'loading');
+      responseAnswer.classList.add('empty');
+      responseSources.classList.add('empty');
+
+      try {
+        const response = await fetch(`${API_BASE}/query`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ query }),
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+          const { data } = result;
+          
+          // Display answer
+          answerContent.textContent = data.answer;
+          responseAnswer.classList.remove('empty');
+
+          // Display sources
+          if (data.sources && data.sources.length > 0) {
+            sourcesContent.innerHTML = data.sources
+              .map((source, idx) => `
+                <div class="source-item">
+                  <strong>Source ${idx + 1}:</strong> ${source.content.substring(0, 100)}...
+                </div>
+              `)
+              .join('');
+            responseSources.classList.remove('empty');
+          }
+
+          showStatus(queryStatus, ' Response generated successfully', 'success');
+          queryInput.value = '';
+        } else {
+          showStatus(queryStatus, ` ${result.error}`, 'error');
+        }
+      } catch (error) {
+        showStatus(queryStatus, ` ${error.message}`, 'error');
+        console.error('Query error:', error);
+      } finally {
+        askBtn.disabled = false;
+      }
+    }
+
+    async function handleSave() {
+      saveBtn.disabled = true;
+      try {
+        const response = await fetch(`${API_BASE}/save`, { method: 'POST' });
+        const result = await response.json();
+        showStatus(uploadStatus, result.success ? ' Vector store saved' : `❌ ${result.error}`, result.success ? 'success' : 'error');
+      } catch (error) {
+        showStatus(uploadStatus, ` ${error.message}`, 'error');
+      } finally {
+        saveBtn.disabled = false;
+      }
+    }
+
+    async function handleLoad() {
+      loadBtn.disabled = true;
+      try {
+        const response = await fetch(`${API_BASE}/load`, { method: 'POST' });
+        const result = await response.json();
+        if (result.success) {
+          updateDocumentCount();
+          showStatus(uploadStatus, ` Loaded ${result.documentCount} documents`, 'success');
+        } else {
+          showStatus(uploadStatus, ` ${result.error}`, 'error');
+        }
+      } catch (error) {
+        showStatus(uploadStatus, ` ${error.message}`, 'error');
+      } finally {
+        loadBtn.disabled = false;
+      }
+    }
+
+    async function handleClear() {
+      if (!confirm('Are you sure you want to clear all documents?')) return;
+      
+      clearBtn.disabled = true;
+      try {
+        const response = await fetch(`${API_BASE}/clear`, { method: 'POST' });
+        const result = await response.json();
+        if (result.success) {
+          updateDocumentCount();
+          showStatus(uploadStatus, ' All documents cleared', 'success');
+        } else {
+          showStatus(uploadStatus, ` ${result.error}`, 'error');
+        }
+      } catch (error) {
+        showStatus(uploadStatus, ` ${error.message}`, 'error');
+      } finally {
+        clearBtn.disabled = false;
+      }
+    }
+  </script>
+</body>
+</html>
