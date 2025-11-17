@@ -14,33 +14,8 @@ TOON Serialization: Token Oriented Object Notation achieves 40-60% token efficie
 Minimal Frontend: Web based user-friendly file upload and Q&A.
 Modular Architecture: Well defined utilities that are easy to use, maintain and test.
 
- Project Structure
-
-src/
-└── index.ts                 # Entry point and exports.
-├── server.ts                # TSON API express server.
-├── types.ts                 # TypeScript types.
-└── utils/
-    ├── chunking.ts          # Text chunking software.
-    ├── prompting.ts        # Prompting generation with Gecko
-    ├── vectorStore.ts       # FAISS vector store implementation
-    ├── reranking-mode.ts  # Document reranking modes
-    ├── ragSystem.ts         # System Description RAG system orchestration
-    └──pdfProcessor.ts  PDF extract and process.
-
-public/
-└── index.html               # Web frontend
-
-dist/runnable/            # The generated JavaScript version is compiled.
-
- Installation
-
-Prerequisites
-Node.js 16+ and npm
-Google API Key (observe one on aistudio.google.com/app/apikeys)
 
 Setup
-
 cd RAG
 npm install
 
